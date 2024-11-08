@@ -20,8 +20,17 @@ const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
 
+// Global values.
+let playerCoins = 0;
+const cacheValues = new Map<string, number>();
+
+// ------------------------------------------------
+// UI ELEMENTS
+// ------------------------------------------------
+// grab main div from html.
 const app = document.getElementById("app")!;
 
+// control panel DIV.
 const controlPanel = document.createElement("div");
 app.appendChild(controlPanel);
 controlPanel.style.width = "100%";
@@ -31,6 +40,7 @@ controlPanel.style.top = "0";
 controlPanel.style.left = "0";
 controlPanel.style.backgroundColor = "rgba(0,0,0,0.2)";
 
+// map panel div.
 const mapPanel = document.createElement("div");
 app.appendChild(mapPanel);
 mapPanel.style.width = "100%";
@@ -40,9 +50,7 @@ mapPanel.style.top = "50px";
 mapPanel.style.left = "0";
 mapPanel.id = "map";
 
-let playerCoins = 0;
-const cacheValues = new Map<string, number>();
-
+// status panel div.
 const statusPanel = document.createElement("div");
 app.appendChild(statusPanel);
 statusPanel.style.width = "100%";
@@ -106,11 +114,12 @@ function spawnCache(i: number, j: number) {
   rect.bindTooltip(hashCoordinates(i, j));
 
   rect.bindPopup(() => {
+    // grab pointValue from cacheValues hashmap, or generate with luck() if null
     const key = hashCoordinates(i, j);
-    // let pointValue = Math.floor(luck(hashCoordinates(i, j)) * 100);
     let pointValue = cacheValues.get(key) ?? Math.floor(luck(key) * 100);
     cacheValues.set(key, pointValue);
 
+    // setup a div popup at this cache with collect/deposit buttons.
     const popupDiv = document.createElement("div");
     const popupText = document.createElement("div");
     popupText.innerText = `You found a cache! ${pointValue} coins here.`;
@@ -118,7 +127,17 @@ function spawnCache(i: number, j: number) {
 
     const withdrawButton = document.createElement("button");
     withdrawButton.innerText = "Collect";
+    withdrawButton.style.backgroundColor = "green";
+    withdrawButton.style.color = "black";
     popupDiv.appendChild(withdrawButton);
+
+    const depositButton = document.createElement("button");
+    depositButton.innerText = "Deposit";
+    depositButton.style.backgroundColor = "blue";
+    depositButton.style.color = "black";
+    popupDiv.appendChild(depositButton);
+
+    // add event listeners
     withdrawButton.addEventListener("click", () => {
       if (pointValue > 0) {
         pointValue--;
@@ -128,10 +147,6 @@ function spawnCache(i: number, j: number) {
         updateStatusPanel();
       }
     });
-
-    const depositButton = document.createElement("button");
-    depositButton.innerText = "Deposit";
-    popupDiv.appendChild(depositButton);
     depositButton.addEventListener("click", () => {
       if (playerCoins > 0) {
         pointValue++;
