@@ -41,6 +41,7 @@ mapPanel.style.left = "0";
 mapPanel.id = "map";
 
 let playerCoins = 0;
+const cacheValues = new Map<string, number>();
 
 const statusPanel = document.createElement("div");
 app.appendChild(statusPanel);
@@ -91,6 +92,8 @@ function updateStatusPanel() {
   statusPanel.innerHTML = `Player has ${playerCoins} coins.`;
 }
 
+// create a map object for player interactivity.
+//    should NOT interact with game data.
 function spawnCache(i: number, j: number) {
   const origin = OAKES_CLASSROOM;
   const bounds = leaflet.latLngBounds(
@@ -103,19 +106,37 @@ function spawnCache(i: number, j: number) {
   rect.bindTooltip(hashCoordinates(i, j));
 
   rect.bindPopup(() => {
-    let pointValue = Math.floor(luck(hashCoordinates(i, j)) * 100);
+    const key = hashCoordinates(i, j);
+    // let pointValue = Math.floor(luck(hashCoordinates(i, j)) * 100);
+    let pointValue = cacheValues.get(key) ?? Math.floor(luck(key) * 100);
+    cacheValues.set(key, pointValue);
 
     const popupDiv = document.createElement("div");
     const popupText = document.createElement("div");
     popupText.innerText = `You found a cache! ${pointValue} coins here.`;
     popupDiv.appendChild(popupText);
-    const button = document.createElement("button");
-    button.innerText = "Collect";
-    popupDiv.appendChild(button);
-    button.addEventListener("click", () => {
+
+    const withdrawButton = document.createElement("button");
+    withdrawButton.innerText = "Collect";
+    popupDiv.appendChild(withdrawButton);
+    withdrawButton.addEventListener("click", () => {
       if (pointValue > 0) {
         pointValue--;
         playerCoins++;
+        cacheValues.set(key, pointValue);
+        popupText.innerText = `You found a cache! ${pointValue} coins here.`;
+        updateStatusPanel();
+      }
+    });
+
+    const depositButton = document.createElement("button");
+    depositButton.innerText = "Deposit";
+    popupDiv.appendChild(depositButton);
+    depositButton.addEventListener("click", () => {
+      if (playerCoins > 0) {
+        pointValue++;
+        playerCoins--;
+        cacheValues.set(key, pointValue);
         popupText.innerText = `You found a cache! ${pointValue} coins here.`;
         updateStatusPanel();
       }
