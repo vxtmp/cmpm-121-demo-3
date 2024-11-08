@@ -9,16 +9,16 @@ import "./style.css";
 import "./leafletWorkaround.ts";
 
 // Deterministic random number generator
-// import luck from "./luck.ts";
+import luck from "./luck.ts";
 
 // Location of our classroom (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
 
 // Tunable gameplay parameters
 const GAMEPLAY_ZOOM_LEVEL = 19;
-// const TILE_DEGREES = 1e-4;
-// const NEIGHBORHOOD_SIZE = 8;
-// const CACHE_SPAWN_PROBABILITY = 0.1;
+const TILE_DEGREES = 1e-4;
+const NEIGHBORHOOD_SIZE = 8;
+const CACHE_SPAWN_PROBABILITY = 0.1;
 
 const app = document.getElementById("app")!;
 
@@ -29,7 +29,7 @@ controlPanel.style.height = "50px";
 controlPanel.style.position = "absolute";
 controlPanel.style.top = "0";
 controlPanel.style.left = "0";
-controlPanel.style.backgroundColor = "rgba(0,0,0,0.5)";
+controlPanel.style.backgroundColor = "rgba(0,0,0,0.2)";
 
 const mapPanel = document.createElement("div");
 app.appendChild(mapPanel);
@@ -40,6 +40,8 @@ mapPanel.style.top = "50px";
 mapPanel.style.left = "0";
 mapPanel.id = "map";
 
+let playerCoins = 0;
+
 const statusPanel = document.createElement("div");
 app.appendChild(statusPanel);
 statusPanel.style.width = "100%";
@@ -47,7 +49,8 @@ statusPanel.style.height = "50px";
 statusPanel.style.position = "absolute";
 statusPanel.style.bottom = "0";
 statusPanel.style.left = "0";
-statusPanel.style.backgroundColor = "rgba(0,0,0,0.5)";
+statusPanel.style.backgroundColor = "rgba(0,0,0,0.2)";
+statusPanel.innerHTML = `Player has ${playerCoins} coins.`;
 
 // Create the map (element with id "map" is defined in index.html)
 const map = leaflet.map(document.getElementById("map")!, {
@@ -74,4 +77,57 @@ function createPlayer() {
   playerMarker.addTo(map);
 }
 
+function createCaches() {
+  for (let i = 0; i < NEIGHBORHOOD_SIZE; i++) {
+    for (let j = 0; j < NEIGHBORHOOD_SIZE; j++) {
+      if (luck(hashCoordinates(i, j)) < CACHE_SPAWN_PROBABILITY) {
+        spawnCache(i, j);
+      }
+    }
+  }
+}
+
+function updateStatusPanel() {
+  statusPanel.innerHTML = `Player has ${playerCoins} coins.`;
+}
+
+function spawnCache(i: number, j: number) {
+  const origin = OAKES_CLASSROOM;
+  const bounds = leaflet.latLngBounds(
+    [origin.lat + i * TILE_DEGREES, origin.lng + j * TILE_DEGREES],
+    [origin.lat + (i + 1) * TILE_DEGREES, origin.lng + (j + 1) * TILE_DEGREES],
+  );
+
+  const rect = leaflet.rectangle(bounds, { color: "red", weight: 1 });
+  rect.addTo(map);
+  rect.bindTooltip(hashCoordinates(i, j));
+
+  rect.bindPopup(() => {
+    let pointValue = Math.floor(luck(hashCoordinates(i, j)) * 100);
+
+    const popupDiv = document.createElement("div");
+    const popupText = document.createElement("div");
+    popupText.innerText = `You found a cache! ${pointValue} coins here.`;
+    popupDiv.appendChild(popupText);
+    const button = document.createElement("button");
+    button.innerText = "Collect";
+    popupDiv.appendChild(button);
+    button.addEventListener("click", () => {
+      if (pointValue > 0) {
+        pointValue--;
+        playerCoins++;
+        popupText.innerText = `You found a cache! ${pointValue} coins here.`;
+        updateStatusPanel();
+      }
+    });
+    return popupDiv;
+  });
+}
+
+// make some unique string out of the coordinates
+function hashCoordinates(i: number, j: number): string {
+  return `X: ${i}, Y: ${j}`;
+}
+
 createPlayer();
+createCaches();
