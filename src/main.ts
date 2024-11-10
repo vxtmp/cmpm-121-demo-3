@@ -11,6 +11,14 @@ import "./leafletWorkaround.ts";
 import { Board, Cell, Coin } from "./board.ts";
 import { Player } from "./player.ts";
 
+import {
+  initControlPanel,
+  initDownButton,
+  initLeftButton,
+  initRightButton,
+  initUpButton,
+} from "./controlPanel.ts";
+
 // Location of our classroom (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
 const NULL_ISLAND = leaflet.latLng(0, 0);
@@ -31,14 +39,17 @@ const board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 const app = document.getElementById("app")!;
 
 // control panel DIV.
-const controlPanel = document.createElement("div");
+const controlPanel = initControlPanel();
 app.appendChild(controlPanel);
-controlPanel.style.width = "100%";
-controlPanel.style.height = "50px";
-controlPanel.style.position = "absolute";
-controlPanel.style.top = "0";
-controlPanel.style.left = "0";
-controlPanel.style.backgroundColor = "rgba(0,0,0,0.2)";
+// add up left down right buttons to controlPanel. Make them arrow emojis
+const upButton = initUpButton();
+const leftButton = initLeftButton();
+const downButton = initDownButton();
+const rightButton = initRightButton();
+controlPanel.appendChild(leftButton);
+controlPanel.appendChild(upButton);
+controlPanel.appendChild(downButton);
+controlPanel.appendChild(rightButton);
 
 // map panel div.
 const mapPanel = document.createElement("div");
@@ -89,7 +100,6 @@ leaflet
 
 function createCaches() {
   const location = player.getLocation();
-
   for (const neighbor of board.getCellsNearPoint(location)) {
     if (board.calculateLuckiness(neighbor) < CACHE_SPAWN_PROBABILITY) {
       spawnCache(neighbor); // adds a clickable to map for cache.
