@@ -29,13 +29,14 @@ export class Board {
   // map a coordinate string to a Cell object?
   private readonly knownCells: Map<string, Cell>;
   private readonly knownCaches: Map<Cell, Cache>;
-  //   private readonly knownCacheMomentos: Map<Cell, string>;
+  private readonly knownCacheMomentos: Map<Cell, string>;
 
   constructor(tileWidth: number, tileVisibilityRadius: number) {
     this.tileWidth = tileWidth;
     this.tileVisibilityRadius = tileVisibilityRadius;
     this.knownCells = new Map();
     this.knownCaches = new Map();
+    this.knownCacheMomentos = new Map();
   }
 
   // Takes cell object, returns the cell object in the map.
@@ -90,13 +91,26 @@ export class Board {
 
   getCacheForCell(cell: Cell): Cache | null {
     if (this.calculateLuckiness(cell) < CACHE_SPAWN_PROBABILITY) { // roll 1:10. deterministic. if supposed to have cache,
-      if (!this.knownCaches.has(cell)) { // but have not visited.
+      //   if (!this.knownCaches.has(cell)) { // but have not visited.
+      if (!this.knownCacheMomentos.has(cell)) {
         const numCoins = this.calculateNumCoinsToSpawn(cell);
         this.initNewCache(cell, numCoins);
       }
-      return this.knownCaches.get(cell)!;
+      const momentos = this.knownCacheMomentos.get(cell)!;
+      return this.momentosToCache(momentos);
     }
     return null;
+  }
+
+  private cacheToMomentos(cache: Cache): string {
+    console.log("converted cache to momentos");
+    return JSON.stringify(cache);
+  }
+
+  private momentosToCache(momentos: string): Cache {
+    console.log("converted momentos to cache");
+    console.log("momentos: ", momentos);
+    return JSON.parse(momentos);
   }
 
   calculateNumCoinsToSpawn(cell: Cell): number {
@@ -122,7 +136,10 @@ export class Board {
       newCache.coins.push(new Coin(cell, newCache.currentSerial++));
     }
 
+    // convert the new cache to a string
+    const newMomentos = this.cacheToMomentos(newCache);
+
     // add the new cache to the map.
-    this.knownCaches.set(cell, newCache);
+    this.knownCacheMomentos.set(cell, newMomentos);
   }
 }
