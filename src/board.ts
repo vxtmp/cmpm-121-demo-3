@@ -28,14 +28,12 @@ export class Board {
 
   // map a coordinate string to a Cell object?
   private readonly knownCells: Map<string, Cell>;
-  private readonly knownCaches: Map<Cell, Cache>;
   private readonly knownCacheMomentos: Map<Cell, string>;
 
   constructor(tileWidth: number, tileVisibilityRadius: number) {
     this.tileWidth = tileWidth;
     this.tileVisibilityRadius = tileVisibilityRadius;
     this.knownCells = new Map();
-    this.knownCaches = new Map();
     this.knownCacheMomentos = new Map();
   }
 
@@ -91,14 +89,19 @@ export class Board {
 
   getCacheForCell(cell: Cell): Cache | null {
     if (this.calculateLuckiness(cell) < CACHE_SPAWN_PROBABILITY) { // roll 1:10. deterministic. if supposed to have cache,
-      if (!this.knownCacheMomentos.has(cell)) {
+      if (!this.knownCacheMomentos.has(cell)) { // if unvisited.
         const numCoins = this.calculateNumCoinsToSpawn(cell);
-        this.initNewCache(cell, numCoins);
+        this.initNewCache(cell, numCoins); // create cache at this cell.
       }
-      const momentos = this.knownCacheMomentos.get(cell)!;
-      return this.momentosToCache(momentos);
+      const momentos = this.knownCacheMomentos.get(cell)!; // get cacheMomentos.
+      return this.momentosToCache(momentos); // return converted cache object.
     }
     return null;
+  }
+
+  setCacheForCell(cell: Cell, cache: Cache): void {
+    const momentos = this.cacheToMomentos(cache);
+    this.knownCacheMomentos.set(cell, momentos);
   }
 
   private cacheToMomentos(cache: Cache): string {
@@ -120,6 +123,7 @@ export class Board {
   }
 
   initNewCache(cell: Cell, numCoins: number): void {
+    console.log("initting a new cache");
     // make a new cache object
     const newCache: Cache = {
       coins: [],

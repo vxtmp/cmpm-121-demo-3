@@ -142,10 +142,12 @@ function updateStatusPanel() {
 // create a map object for player interactivity.
 //    should NOT interact with game data.
 function spawnCache(cellToSpawn: Cell) {
+  // assert that there should be a cache here.
   if (!(board.calculateLuckiness(cellToSpawn) < CACHE_SPAWN_PROBABILITY)) {
     console.log("attempted to spawnCache() in non-cache cell.");
     return;
   }
+
   const bounds = board.getCellBounds(cellToSpawn);
   const cache = board.getCacheForCell(cellToSpawn)!;
 
@@ -182,6 +184,9 @@ function spawnCache(cellToSpawn: Cell) {
         const coin = cache.coins.pop()!;
         player.addCoin(coin);
 
+        // re-convert the new cache state to a momento and store it.
+        board.setCacheForCell(cellToSpawn, cache);
+
         // update UI elements.
         statusMsg = `You picked up coin ${
           decodeCoin(coin)
@@ -197,6 +202,9 @@ function spawnCache(cellToSpawn: Cell) {
         // game data coin exchange.
         const coin = player.getCoin()!;
         cache.coins.push(coin);
+
+        // re-convert the new cache state to a momento and store it.
+        board.setCacheForCell(cellToSpawn, cache);
 
         // update UI elements.
         statusMsg = `You left behind coin ${
