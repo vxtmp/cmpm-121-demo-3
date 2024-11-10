@@ -164,10 +164,10 @@ function spawnCache(cellToSpawn: Cell) {
     withdrawButton.addEventListener("click", () => {
       if (cache.coins.length > 0) {
         const coin = cache.coins.pop()!;
+        player.addCoin(coin);
         statusMsg = `You picked up coin ${
           decodeCoin(coin)
         }.<br>Player has ${player.getCoinCount()} coins.`;
-        player.addCoin(coin);
         popupText.innerText =
           `You found a cache! ${cache.coins.length} coins here.`;
         player.notifyObservers();
@@ -176,10 +176,10 @@ function spawnCache(cellToSpawn: Cell) {
     depositButton.addEventListener("click", () => {
       if (player.getCoinCount() > 0) {
         const coin = player.getCoin()!;
+        cache.coins.push(coin);
         statusMsg = `You left behind coin ${
           decodeCoin(coin)
         }.<br>Player has ${player.getCoinCount()} coins.`;
-        cache.coins.push(coin);
         popupText.innerText =
           `You found a cache! ${cache.coins.length} coins here.`;
         player.notifyObservers();

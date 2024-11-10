@@ -29,6 +29,7 @@ export class Board {
   // map a coordinate string to a Cell object?
   private readonly knownCells: Map<string, Cell>;
   private readonly knownCaches: Map<Cell, Cache>;
+  //   private readonly knownCacheMomentos: Map<Cell, string>;
 
   constructor(tileWidth: number, tileVisibilityRadius: number) {
     this.tileWidth = tileWidth;
