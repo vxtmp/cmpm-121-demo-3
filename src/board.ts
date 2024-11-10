@@ -91,7 +91,6 @@ export class Board {
 
   getCacheForCell(cell: Cell): Cache | null {
     if (this.calculateLuckiness(cell) < CACHE_SPAWN_PROBABILITY) { // roll 1:10. deterministic. if supposed to have cache,
-      //   if (!this.knownCaches.has(cell)) { // but have not visited.
       if (!this.knownCacheMomentos.has(cell)) {
         const numCoins = this.calculateNumCoinsToSpawn(cell);
         this.initNewCache(cell, numCoins);
@@ -103,13 +102,10 @@ export class Board {
   }
 
   private cacheToMomentos(cache: Cache): string {
-    console.log("converted cache to momentos");
     return JSON.stringify(cache);
   }
 
   private momentosToCache(momentos: string): Cache {
-    console.log("converted momentos to cache");
-    console.log("momentos: ", momentos);
     return JSON.parse(momentos);
   }
 
