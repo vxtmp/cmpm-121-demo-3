@@ -109,8 +109,6 @@ export class Board {
   }
 
   initNewCache(cell: Cell, numCoins: number): void {
-    const key = stringifyCell(cell);
-
     // make a new cache object
     const newCache: Cache = {
       coins: [],
@@ -121,7 +119,6 @@ export class Board {
     // add coins to the new cache
     for (let i = 0; i < numCoins; i++) {
       newCache.coins.push(new Coin(cell, newCache.currentSerial++));
-      console.log(`Coin ${newCache.currentSerial} created at ${key}`);
     }
 
     // add the new cache to the map.
