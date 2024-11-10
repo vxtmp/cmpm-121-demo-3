@@ -1,6 +1,6 @@
 import leaflet from "leaflet";
 
-function getCurrentGeolocation(): Promise<GeolocationPosition> {
+function promiseCurrentGeolocation(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(resolve, reject);
@@ -10,10 +10,8 @@ function getCurrentGeolocation(): Promise<GeolocationPosition> {
   });
 }
 
-//   // Example usage
-
-export function getLocation(): leaflet.latLng | null {
-  getCurrentGeolocation()
+export function getDeviceGeolocation(): leaflet.latLng | null {
+  promiseCurrentGeolocation()
     .then((position) => {
       const { latitude, longitude } = position.coords;
       console.log(`Latitude: ${latitude}, Longitude: ${longitude}`);

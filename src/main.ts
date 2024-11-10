@@ -12,7 +12,7 @@ import { Board, Cell, Coin } from "./board.ts";
 import { Player } from "./player.ts";
 
 import { initButton, initControlPanel } from "./controlPanel.ts";
-// import { getLocation } from "./geolocation.ts";
+import { getDeviceGeolocation } from "./geolocation.ts";
 
 // Location of our classroom (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
@@ -221,4 +221,19 @@ export function stringifyCell(cell: Cell): string {
   return `${i}:${j}`;
 }
 
+// periodicallyc all this function to update player location.
+function geolocationUpdate() {
+  if (geolocationActivated) {
+    const newLoc = getDeviceGeolocation();
+    if (newLoc) {
+      console.log("geolocation updating to: ", newLoc);
+      player.setLocation(getDeviceGeolocation());
+    } else {
+      console.log("geolocation returned null.");
+    }
+  }
+  setTimeout(geolocationUpdate, 1000);
+}
+
 updateMapView();
+geolocationUpdate();
