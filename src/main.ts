@@ -11,13 +11,7 @@ import "./leafletWorkaround.ts";
 import { Board, Cell, Coin } from "./board.ts";
 import { Player } from "./player.ts";
 
-import {
-  initControlPanel,
-  initDownButton,
-  initLeftButton,
-  initRightButton,
-  initUpButton,
-} from "./controlPanel.ts";
+import { initButton, initControlPanel } from "./controlPanel.ts";
 
 // Location of our classroom (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
@@ -42,10 +36,16 @@ const app = document.getElementById("app")!;
 const controlPanel = initControlPanel();
 app.appendChild(controlPanel);
 // add up left down right buttons to controlPanel. Make them arrow emojis
-const upButton = initUpButton();
-const leftButton = initLeftButton();
-const downButton = initDownButton();
-const rightButton = initRightButton();
+const upButton = initButton("⬆️");
+const leftButton = initButton("⬅️");
+const downButton = initButton("⬇️");
+const rightButton = initButton("➡️");
+// add event listeners
+upButton.addEventListener("click", () => player.moveUp());
+leftButton.addEventListener("click", () => player.moveLeft());
+downButton.addEventListener("click", () => player.moveDown());
+rightButton.addEventListener("click", () => player.moveRight());
+// append buttons to control panel.
 controlPanel.appendChild(leftButton);
 controlPanel.appendChild(upButton);
 controlPanel.appendChild(downButton);
@@ -70,7 +70,8 @@ statusPanel.style.position = "absolute";
 statusPanel.style.bottom = "0";
 statusPanel.style.left = "0";
 statusPanel.style.backgroundColor = "rgba(0,0,0,0.2)";
-statusPanel.innerHTML = `You don't have any coins! Collect some from caches.`;
+let statusMsg = "You don't have any coins! Collect some from caches.";
+statusPanel.innerHTML = statusMsg;
 
 // ------------------------------------------------
 // GAMEPLAY
@@ -88,6 +89,8 @@ const map = leaflet.map(document.getElementById("map")!, {
 
 // Create the player
 const player = new Player(OAKES_CLASSROOM, map);
+player.addObserver(updateMapView);
+player.addObserver(updateStatusPanel);
 
 // Populate the map with a background tile layer
 leaflet
@@ -107,9 +110,21 @@ function createCaches() {
   }
 }
 
-function updateStatusPanel(lastCoinMsg: string) {
-  statusPanel.innerHTML =
-    `${lastCoinMsg}<br>Player has ${player.getCoinCount()} coins.`;
+function updateMapView() {
+  console.log("updateMapView() called.");
+  map.setView(player.getLocation(), GAMEPLAY_ZOOM_LEVEL);
+  // clear all the rects and then spawn new ones based on new position.
+  map.eachLayer((layer) => {
+    if (layer instanceof leaflet.Rectangle) {
+      map.removeLayer(layer);
+    }
+  });
+  createCaches();
+}
+
+function updateStatusPanel() {
+  console.log("updateStatusPanel() called.");
+  statusPanel.innerHTML = statusMsg;
 }
 
 // create a map object for player interactivity.
@@ -151,21 +166,25 @@ function spawnCache(cellToSpawn: Cell) {
     withdrawButton.addEventListener("click", () => {
       if (cache.coins.length > 0) {
         const coin = cache.coins.pop()!;
-        const coinMsg = `Received coin ${decodeCoin(coin)}.`;
+        statusMsg = `You picked up coin ${
+          decodeCoin(coin)
+        }.<br>Player has ${player.getCoinCount()} coins.`;
         player.addCoin(coin);
         popupText.innerText =
           `You found a cache! ${cache.coins.length} coins here.`;
-        updateStatusPanel(coinMsg);
+        player.notifyObservers();
       }
     });
     depositButton.addEventListener("click", () => {
       if (player.getCoinCount() > 0) {
         const coin = player.getCoin()!;
-        const coinMsg = `Left behind coin ${decodeCoin(coin)}.`;
+        statusMsg = `You left behind coin ${
+          decodeCoin(coin)
+        }.<br>Player has ${player.getCoinCount()} coins.`;
         cache.coins.push(coin);
         popupText.innerText =
           `You found a cache! ${cache.coins.length} coins here.`;
-        updateStatusPanel(coinMsg);
+        player.notifyObservers();
       }
     });
     return popupDiv;
