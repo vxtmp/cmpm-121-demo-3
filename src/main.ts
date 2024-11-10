@@ -11,18 +11,23 @@ import "./leafletWorkaround.ts";
 // Deterministic random number generator
 import luck from "./luck.ts";
 
+import { Board, Cell } from "./board.ts";
+import { Player } from "./player.ts";
+
 // Location of our classroom (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
+const NULL_ISLAND = leaflet.latLng(0, 0);
 
 // Tunable gameplay parameters
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
-const CACHE_SPAWN_PROBABILITY = 0.1;
+export const CACHE_SPAWN_PROBABILITY = 0.1;
 
 // Global values.
-let playerCoins = 0;
-const cacheValues = new Map<string, number>();
+// let playerCoins = 0; // deprecated. use player.coins.length instead.
+// const cacheValues = new Map<string, number>(); // deprecated. replace with board object.
+const board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
 // ------------------------------------------------
 // UI ELEMENTS
@@ -61,15 +66,22 @@ statusPanel.style.left = "0";
 statusPanel.style.backgroundColor = "rgba(0,0,0,0.2)";
 statusPanel.innerHTML = `Player has ${playerCoins} coins.`;
 
+// ------------------------------------------------
+// GAMEPLAY
+// ------------------------------------------------
+
 // Create the map (element with id "map" is defined in index.html)
 const map = leaflet.map(document.getElementById("map")!, {
-  center: OAKES_CLASSROOM,
+  center: NULL_ISLAND,
   zoom: GAMEPLAY_ZOOM_LEVEL,
   minZoom: GAMEPLAY_ZOOM_LEVEL,
   maxZoom: GAMEPLAY_ZOOM_LEVEL,
   zoomControl: false,
   scrollWheelZoom: false,
 });
+
+// Create the player
+const player = new Player(OAKES_CLASSROOM, map);
 
 // Populate the map with a background tile layer
 leaflet
@@ -80,79 +92,75 @@ leaflet
   })
   .addTo(map);
 
-function createPlayer() {
-  const playerMarker = leaflet.marker(OAKES_CLASSROOM);
-  playerMarker.bindTooltip("You are here.");
-  playerMarker.addTo(map);
-}
-
 function createCaches() {
-  for (let i = 0; i < NEIGHBORHOOD_SIZE; i++) {
-    for (let j = 0; j < NEIGHBORHOOD_SIZE; j++) {
-      if (luck(hashCoordinates(i, j)) < CACHE_SPAWN_PROBABILITY) {
-        spawnCache(i, j);
-      }
+  const location = player.getLocation();
+
+  for (const neighbor of board.getCellsNearPoint(location)) {
+    // const cache = board.getCacheForCell(neighbor); //
+
+    const key = `i:${neighbor.i},j:${neighbor.j}`;
+    const luckValue = luck(key);
+
+    if (luckValue < CACHE_SPAWN_PROBABILITY) {
+      spawnCache(neighbor); // checks if cache exists, if not, creates one.
+      // adds a clickable to map and attaches to cache.
     }
   }
 }
 
 function updateStatusPanel() {
-  statusPanel.innerHTML = `Player has ${playerCoins} coins.`;
+  statusPanel.innerHTML = `Player has ${player.getCoinCount()} coins.`;
 }
 
 // create a map object for player interactivity.
 //    should NOT interact with game data.
-function spawnCache(i: number, j: number) {
-  const origin = OAKES_CLASSROOM;
-  const bounds = leaflet.latLngBounds(
-    [origin.lat + i * TILE_DEGREES, origin.lng + j * TILE_DEGREES],
-    [origin.lat + (i + 1) * TILE_DEGREES, origin.lng + (j + 1) * TILE_DEGREES],
-  );
+function spawnCache(cellToSpawn: Cell) {
+  const bounds = board.getCellBounds(cellToSpawn);
+  const cache = board.getCacheForCell(cellToSpawn)!;
 
+  // rects are temporary map objects we will spawn and then attach to their respective cache.
   const rect = leaflet.rectangle(bounds, { color: "red", weight: 1 });
   rect.addTo(map);
-  rect.bindTooltip(hashCoordinates(i, j));
+  rect.bindTooltip(stringifyCell(cellToSpawn));
 
   rect.bindPopup(() => {
-    // grab pointValue from cacheValues hashmap, or generate with luck() if null
-    const key = hashCoordinates(i, j);
-    let pointValue = cacheValues.get(key) ?? Math.floor(luck(key) * 100);
-    cacheValues.set(key, pointValue);
-
     // setup a div popup at this cache with collect/deposit buttons.
     const popupDiv = document.createElement("div");
     const popupText = document.createElement("div");
-    popupText.innerText = `You found a cache! ${pointValue} coins here.`;
+    popupText.innerText =
+      `You found a cache! ${cache.coins.length} coins here.`;
     popupDiv.appendChild(popupText);
 
     const withdrawButton = document.createElement("button");
     withdrawButton.innerText = "Collect";
-    withdrawButton.style.backgroundColor = "green";
+    withdrawButton.style.backgroundColor = "#aaffaa";
     withdrawButton.style.color = "black";
     popupDiv.appendChild(withdrawButton);
 
     const depositButton = document.createElement("button");
     depositButton.innerText = "Deposit";
-    depositButton.style.backgroundColor = "blue";
+    depositButton.style.backgroundColor = "#aaaaff";
     depositButton.style.color = "black";
     popupDiv.appendChild(depositButton);
 
     // add event listeners
     withdrawButton.addEventListener("click", () => {
-      if (pointValue > 0) {
-        pointValue--;
-        playerCoins++;
-        cacheValues.set(key, pointValue);
-        popupText.innerText = `You found a cache! ${pointValue} coins here.`;
+      if (cache.coins.length > 0) {
+        const coin = cache.coins.pop()!; // pointValue--;
+        player.addCoin(coin); // playerCoins++;
+        // cacheValues.set(key, pointValue);
+        popupText.innerText =
+          `You found a cache! ${cache.coins.length} coins here.`;
         updateStatusPanel();
       }
     });
     depositButton.addEventListener("click", () => {
-      if (playerCoins > 0) {
-        pointValue++;
-        playerCoins--;
-        cacheValues.set(key, pointValue);
-        popupText.innerText = `You found a cache! ${pointValue} coins here.`;
+      if (player.getCoinCount() > 0) {
+        const coin = player.getCoin()!; // playerCoins--;
+        cache.coins.push(coin); // pointValue++;
+        // cacheValues.set(key, pointValue);
+        popupText.innerText =
+          `You found a cache! ${cache.coins.length} coins here.`;
         updateStatusPanel();
       }
     });
@@ -161,9 +169,15 @@ function spawnCache(i: number, j: number) {
 }
 
 // make some unique string out of the coordinates
-function hashCoordinates(i: number, j: number): string {
-  return `X: ${i}, Y: ${j}`;
+export function stringifyCell(cell: Cell): string {
+  const { i, j } = cell;
+  return `${i}:${j}`;
 }
 
-createPlayer();
+function updateView() {
+  const playerLocation = player.getLocation();
+  map.setView(playerLocation, GAMEPLAY_ZOOM_LEVEL);
+}
+
+updateView();
 createCaches();
