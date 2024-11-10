@@ -88,9 +88,7 @@ export class Board {
   }
 
   getCacheForCell(cell: Cell): Cache | null {
-    const key = stringifyCell(cell);
-    const luckiness = luck(key); // Range 0-1.
-    if (luckiness < CACHE_SPAWN_PROBABILITY) { // roll 1:10. deterministic. if supposed to have cache,
+    if (this.calculateLuckiness(cell) < CACHE_SPAWN_PROBABILITY) { // roll 1:10. deterministic. if supposed to have cache,
       if (!this.knownCaches.has(cell)) { // but have not visited.
         const numCoins = this.calculateNumCoinsToSpawn(cell);
         this.initNewCache(cell, numCoins);

@@ -8,9 +8,6 @@ import "./style.css";
 // Fix missing marker images
 import "./leafletWorkaround.ts";
 
-// Deterministic random number generator
-import luck from "./luck.ts";
-
 import { Board, Cell } from "./board.ts";
 import { Player } from "./player.ts";
 
@@ -64,7 +61,7 @@ statusPanel.style.position = "absolute";
 statusPanel.style.bottom = "0";
 statusPanel.style.left = "0";
 statusPanel.style.backgroundColor = "rgba(0,0,0,0.2)";
-statusPanel.innerHTML = `Player has ${playerCoins} coins.`;
+statusPanel.innerHTML = `You don't have any coins! Collect some from caches.`;
 
 // ------------------------------------------------
 // GAMEPLAY
@@ -96,14 +93,8 @@ function createCaches() {
   const location = player.getLocation();
 
   for (const neighbor of board.getCellsNearPoint(location)) {
-    // const cache = board.getCacheForCell(neighbor); //
-
-    const key = `i:${neighbor.i},j:${neighbor.j}`;
-    const luckValue = luck(key);
-
-    if (luckValue < CACHE_SPAWN_PROBABILITY) {
-      spawnCache(neighbor); // checks if cache exists, if not, creates one.
-      // adds a clickable to map and attaches to cache.
+    if (board.calculateLuckiness(neighbor) < CACHE_SPAWN_PROBABILITY) {
+      spawnCache(neighbor); // adds a clickable to map for cache.
     }
   }
 }
@@ -115,6 +106,10 @@ function updateStatusPanel() {
 // create a map object for player interactivity.
 //    should NOT interact with game data.
 function spawnCache(cellToSpawn: Cell) {
+  if (!(board.calculateLuckiness(cellToSpawn) < CACHE_SPAWN_PROBABILITY)) {
+    console.log("attempted to spawnCache() in non-cache cell.");
+    return;
+  }
   const bounds = board.getCellBounds(cellToSpawn);
   const cache = board.getCacheForCell(cellToSpawn)!;
 
