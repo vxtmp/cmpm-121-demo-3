@@ -40,6 +40,10 @@ export class Player {
   public moveUp(): void {
     const lat = this.location.lat + this.MOVE_INCREMENT;
     this.move(lat, this.location.lng);
+    console.log(
+      "current latitude: " + this.location.lat + ", added " +
+        this.MOVE_INCREMENT + " to latitude",
+    );
   }
 
   public moveDown(): void {

@@ -111,7 +111,6 @@ function createCaches() {
 }
 
 function updateMapView() {
-  console.log("updateMapView() called.");
   map.setView(player.getLocation(), GAMEPLAY_ZOOM_LEVEL);
   // clear all the rects and then spawn new ones based on new position.
   map.eachLayer((layer) => {
@@ -123,7 +122,6 @@ function updateMapView() {
 }
 
 function updateStatusPanel() {
-  console.log("updateStatusPanel() called.");
   statusPanel.innerHTML = statusMsg;
 }
 
@@ -201,10 +199,4 @@ export function stringifyCell(cell: Cell): string {
   return `${i}:${j}`;
 }
 
-function updateView() {
-  const playerLocation = player.getLocation();
-  map.setView(playerLocation, GAMEPLAY_ZOOM_LEVEL);
-}
-
-updateView();
-createCaches();
+updateMapView();
