@@ -12,6 +12,7 @@ import { Board, Cell, Coin } from "./board.ts";
 import { Player } from "./player.ts";
 
 import { initButton, initControlPanel } from "./controlPanel.ts";
+// import { getLocation } from "./geolocation.ts";
 
 // Location of our classroom (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
@@ -25,6 +26,7 @@ export const CACHE_SPAWN_PROBABILITY = 0.1;
 
 // Global values.
 const board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
+let geolocationActivated = false;
 
 // ------------------------------------------------
 // UI ELEMENTS
@@ -32,26 +34,38 @@ const board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 // grab main div from html.
 const app = document.getElementById("app")!;
 
-// control panel DIV.
+// CONTROL PANEL DIV ------------------------------
 const controlPanel = initControlPanel();
 app.appendChild(controlPanel);
-// add up left down right buttons to controlPanel. Make them arrow emojis
+// add up left down right buttons to controlPanel
 const upButton = initButton("⬆️");
 const leftButton = initButton("⬅️");
 const downButton = initButton("⬇️");
 const rightButton = initButton("➡️");
+// add geo button
+const geoButton = initButton("🌐");
+geoButton.addEventListener("click", () => {
+  // toggle hide up left right down buttons
+  upButton.hidden = !upButton.hidden;
+  leftButton.hidden = !leftButton.hidden;
+  downButton.hidden = !downButton.hidden;
+  rightButton.hidden = !rightButton.hidden;
+
+  geolocationActivated = !geolocationActivated;
+});
 // add event listeners
 upButton.addEventListener("click", () => player.moveUp());
 leftButton.addEventListener("click", () => player.moveLeft());
 downButton.addEventListener("click", () => player.moveDown());
 rightButton.addEventListener("click", () => player.moveRight());
 // append buttons to control panel.
+controlPanel.appendChild(geoButton);
 controlPanel.appendChild(leftButton);
 controlPanel.appendChild(upButton);
 controlPanel.appendChild(downButton);
 controlPanel.appendChild(rightButton);
 
-// map panel div.
+// MAP PANEL DIV ------------------------------
 const mapPanel = document.createElement("div");
 app.appendChild(mapPanel);
 mapPanel.style.width = "100%";
@@ -61,7 +75,7 @@ mapPanel.style.top = "50px";
 mapPanel.style.left = "0";
 mapPanel.id = "map";
 
-// status panel div.
+// STATUS PANEL DIV ------------------------------
 const statusPanel = document.createElement("div");
 app.appendChild(statusPanel);
 statusPanel.style.width = "100%";

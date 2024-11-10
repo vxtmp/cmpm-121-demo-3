@@ -18,3 +18,5 @@ export function initButton(innerText: string): HTMLButtonElement {
   button.style.color = "black";
   return button;
 }
+
+// write an initEventListener function that takes a HTMLButtonElement and a function as parameters
