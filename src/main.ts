@@ -228,6 +228,7 @@ function geolocationUpdate() {
     if (newLoc) {
       console.log("geolocation updating to: ", newLoc);
       player.setLocation(getDeviceGeolocation());
+      player.notifyObservers();
     } else {
       console.log("geolocation returned null.");
     }
