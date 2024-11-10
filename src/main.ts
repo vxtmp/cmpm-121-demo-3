@@ -8,7 +8,7 @@ import "./style.css";
 // Fix missing marker images
 import "./leafletWorkaround.ts";
 
-import { Board, Cell } from "./board.ts";
+import { Board, Cell, Coin } from "./board.ts";
 import { Player } from "./player.ts";
 
 // Location of our classroom (as identified on Google Maps)
@@ -22,8 +22,6 @@ const NEIGHBORHOOD_SIZE = 8;
 export const CACHE_SPAWN_PROBABILITY = 0.1;
 
 // Global values.
-// let playerCoins = 0; // deprecated. use player.coins.length instead.
-// const cacheValues = new Map<string, number>(); // deprecated. replace with board object.
 const board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
 // ------------------------------------------------
@@ -99,8 +97,9 @@ function createCaches() {
   }
 }
 
-function updateStatusPanel() {
-  statusPanel.innerHTML = `Player has ${player.getCoinCount()} coins.`;
+function updateStatusPanel(lastCoinMsg: string) {
+  statusPanel.innerHTML =
+    `${lastCoinMsg}<br>Player has ${player.getCoinCount()} coins.`;
 }
 
 // create a map object for player interactivity.
@@ -141,26 +140,30 @@ function spawnCache(cellToSpawn: Cell) {
     // add event listeners
     withdrawButton.addEventListener("click", () => {
       if (cache.coins.length > 0) {
-        const coin = cache.coins.pop()!; // pointValue--;
-        player.addCoin(coin); // playerCoins++;
-        // cacheValues.set(key, pointValue);
+        const coin = cache.coins.pop()!;
+        const coinMsg = `Received coin ${decodeCoin(coin)}.`;
+        player.addCoin(coin);
         popupText.innerText =
           `You found a cache! ${cache.coins.length} coins here.`;
-        updateStatusPanel();
+        updateStatusPanel(coinMsg);
       }
     });
     depositButton.addEventListener("click", () => {
       if (player.getCoinCount() > 0) {
-        const coin = player.getCoin()!; // playerCoins--;
-        cache.coins.push(coin); // pointValue++;
-        // cacheValues.set(key, pointValue);
+        const coin = player.getCoin()!;
+        const coinMsg = `Left behind coin ${decodeCoin(coin)}.`;
+        cache.coins.push(coin);
         popupText.innerText =
           `You found a cache! ${cache.coins.length} coins here.`;
-        updateStatusPanel();
+        updateStatusPanel(coinMsg);
       }
     });
     return popupDiv;
   });
+}
+
+export function decodeCoin(coin: Coin): string {
+  return `${coin.spawnLoc.i}:${coin.spawnLoc.j}#${coin.serial}`;
 }
 
 // make some unique string out of the coordinates
