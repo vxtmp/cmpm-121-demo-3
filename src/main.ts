@@ -162,9 +162,13 @@ function spawnCache(cellToSpawn: Cell) {
 
     // add event listeners
     withdrawButton.addEventListener("click", () => {
+      // if cache has coins.
       if (cache.coins.length > 0) {
+        // gamedata. coin exchange.
         const coin = cache.coins.pop()!;
         player.addCoin(coin);
+
+        // update UI elements.
         statusMsg = `You picked up coin ${
           decodeCoin(coin)
         }.<br>Player has ${player.getCoinCount()} coins.`;
@@ -174,9 +178,13 @@ function spawnCache(cellToSpawn: Cell) {
       }
     });
     depositButton.addEventListener("click", () => {
+      // if player has coins.
       if (player.getCoinCount() > 0) {
+        // game data coin exchange.
         const coin = player.getCoin()!;
         cache.coins.push(coin);
+
+        // update UI elements.
         statusMsg = `You left behind coin ${
           decodeCoin(coin)
         }.<br>Player has ${player.getCoinCount()} coins.`;
