@@ -123,7 +123,6 @@ export class Board {
   }
 
   initNewCache(cell: Cell, numCoins: number): void {
-    console.log("initting a new cache");
     // make a new cache object
     const newCache: Cache = {
       coins: [],

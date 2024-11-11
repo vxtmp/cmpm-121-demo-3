@@ -53,6 +53,7 @@ geoButton.addEventListener("click", () => {
   rightButton.hidden = !rightButton.hidden;
 
   geolocationActivated = !geolocationActivated;
+  console.log("geolocationActivated: ", geolocationActivated);
 });
 // add event listeners
 upButton.addEventListener("click", () => {
@@ -80,7 +81,6 @@ downButton.addEventListener("click", () => {
     refreshCaches();
   }
 });
-
 rightButton.addEventListener("click", () => {
   const oldLoc = player.getLocation();
   player.moveRight();
@@ -174,7 +174,11 @@ function crossedCellBoundary(
 ): boolean {
   const oldCell = board.getCellForPoint(oldLoc);
   const newCell = board.getCellForPoint(newLoc);
-  return oldCell.i !== newCell.i || oldCell.j !== newCell.j;
+  if (oldCell.i !== newCell.i || oldCell.j !== newCell.j) {
+    console.log("crossedCellBoundary: ", oldCell, newCell);
+    return true;
+  }
+  return false;
 }
 function updateStatusPanel() {
   statusPanel.innerHTML = statusMsg;
@@ -280,6 +284,8 @@ export function stringifyCell(cell: Cell): string {
 // periodicallyc all this function to update player location.
 function geolocationUpdate() {
   if (geolocationActivated) {
+    console.log("attempting geolocation update.");
+
     // Storing prev loc to detect need for cache refresh.
     const oldLoc = player.getLocation();
     promiseCurrentGeolocation()
@@ -288,6 +294,10 @@ function geolocationUpdate() {
           const { latitude, longitude } = newLoc.coords;
           const newLeafletLoc = leaflet.latLng(latitude, longitude);
           player.setLocation(newLeafletLoc);
+          if (crossedCellBoundary(oldLoc, newLeafletLoc)) {
+            console.log("crossed cell boundary. refreshing caches...");
+            refreshCaches();
+          }
           player.notifyObservers();
         } else {
           console.log("geolocation returned null.");
@@ -296,15 +306,8 @@ function geolocationUpdate() {
       .catch((error) => {
         console.error("Error getting location:", error);
       });
-
-    // Check if we need to refresh displayed map clickables.
-    const newLoc = player.getLocation();
-    if (crossedCellBoundary(oldLoc, newLoc)) {
-      refreshCaches();
-    }
-
-    setTimeout(geolocationUpdate, GEOLOCATION_UPDATE_INTERVAL);
   }
+  setTimeout(geolocationUpdate, GEOLOCATION_UPDATE_INTERVAL);
 }
 
 updateMapView();
