@@ -23,6 +23,7 @@ export class Player {
 
   public setLocation(location: leaflet.LatLng): void {
     this.location = location;
+    this.playerMarker.setLatLng(this.location);
   }
 
   public addCoin(coin: Coin): void {

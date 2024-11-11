@@ -12,7 +12,7 @@ import { Board, Cell, Coin } from "./board.ts";
 import { Player } from "./player.ts";
 
 import { initButton, initControlPanel } from "./controlPanel.ts";
-import { getDeviceGeolocation } from "./geolocation.ts";
+import { promiseCurrentGeolocation } from "./geolocation.ts";
 
 // Location of our classroom (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
@@ -22,6 +22,7 @@ const NULL_ISLAND = leaflet.latLng(0, 0);
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
+const GEOLOCATION_UPDATE_INTERVAL = 1000;
 export const CACHE_SPAWN_PROBABILITY = 0.1;
 
 // Global values.
@@ -54,10 +55,40 @@ geoButton.addEventListener("click", () => {
   geolocationActivated = !geolocationActivated;
 });
 // add event listeners
-upButton.addEventListener("click", () => player.moveUp());
-leftButton.addEventListener("click", () => player.moveLeft());
-downButton.addEventListener("click", () => player.moveDown());
-rightButton.addEventListener("click", () => player.moveRight());
+upButton.addEventListener("click", () => {
+  const oldLoc = player.getLocation();
+  player.moveUp();
+  const newLoc = player.getLocation();
+  if (crossedCellBoundary(oldLoc, newLoc)) {
+    refreshCaches();
+  }
+});
+leftButton.addEventListener("click", () => {
+  const oldLoc = player.getLocation();
+  player.moveLeft();
+  const newLoc = player.getLocation();
+  if (crossedCellBoundary(oldLoc, newLoc)) {
+    refreshCaches();
+  }
+});
+
+downButton.addEventListener("click", () => {
+  const oldLoc = player.getLocation();
+  player.moveDown();
+  const newLoc = player.getLocation();
+  if (crossedCellBoundary(oldLoc, newLoc)) {
+    refreshCaches();
+  }
+});
+
+rightButton.addEventListener("click", () => {
+  const oldLoc = player.getLocation();
+  player.moveRight();
+  const newLoc = player.getLocation();
+  if (crossedCellBoundary(oldLoc, newLoc)) {
+    refreshCaches();
+  }
+});
 // append buttons to control panel.
 controlPanel.appendChild(geoButton);
 controlPanel.appendChild(leftButton);
@@ -126,6 +157,8 @@ function createCaches() {
 
 function updateMapView() {
   map.setView(player.getLocation(), GAMEPLAY_ZOOM_LEVEL);
+}
+function refreshCaches() {
   // clear all the rects and then spawn new ones based on new position.
   map.eachLayer((layer) => {
     if (layer instanceof leaflet.Rectangle) {
@@ -135,6 +168,14 @@ function updateMapView() {
   createCaches();
 }
 
+function crossedCellBoundary(
+  oldLoc: leaflet.LatLng,
+  newLoc: leaflet.LatLng,
+): boolean {
+  const oldCell = board.getCellForPoint(oldLoc);
+  const newCell = board.getCellForPoint(newLoc);
+  return oldCell.i !== newCell.i || oldCell.j !== newCell.j;
+}
 function updateStatusPanel() {
   statusPanel.innerHTML = statusMsg;
 }
@@ -177,7 +218,9 @@ function spawnCache(cellToSpawn: Cell) {
     popupDiv.appendChild(depositButton);
 
     // add event listeners
-    withdrawButton.addEventListener("click", () => {
+    withdrawButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+
       // if cache has coins.
       if (cache.coins.length > 0) {
         // gamedata. coin exchange.
@@ -195,8 +238,12 @@ function spawnCache(cellToSpawn: Cell) {
           `You found a cache! ${cache.coins.length} coins here.`;
         player.notifyObservers();
       }
+
+      return false; // This supposedly prevents popup from closing on click.
     });
-    depositButton.addEventListener("click", () => {
+    depositButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+
       // if player has coins.
       if (player.getCoinCount() > 0) {
         // game data coin exchange.
@@ -214,6 +261,7 @@ function spawnCache(cellToSpawn: Cell) {
           `You found a cache! ${cache.coins.length} coins here.`;
         player.notifyObservers();
       }
+      return false; // This supposedly prevents popup from closing on click.
     });
     return popupDiv;
   });
@@ -232,17 +280,33 @@ export function stringifyCell(cell: Cell): string {
 // periodicallyc all this function to update player location.
 function geolocationUpdate() {
   if (geolocationActivated) {
-    const newLoc = getDeviceGeolocation();
-    if (newLoc) {
-      console.log("geolocation updating to: ", newLoc);
-      player.setLocation(getDeviceGeolocation());
-      player.notifyObservers();
-    } else {
-      console.log("geolocation returned null.");
+    // Storing prev loc to detect need for cache refresh.
+    const oldLoc = player.getLocation();
+    promiseCurrentGeolocation()
+      .then((newLoc) => {
+        if (newLoc) {
+          const { latitude, longitude } = newLoc.coords;
+          const newLeafletLoc = leaflet.latLng(latitude, longitude);
+          player.setLocation(newLeafletLoc);
+          player.notifyObservers();
+        } else {
+          console.log("geolocation returned null.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error getting location:", error);
+      });
+
+    // Check if we need to refresh displayed map clickables.
+    const newLoc = player.getLocation();
+    if (crossedCellBoundary(oldLoc, newLoc)) {
+      refreshCaches();
     }
+
+    setTimeout(geolocationUpdate, GEOLOCATION_UPDATE_INTERVAL);
   }
-  setTimeout(geolocationUpdate, 1000);
 }
 
 updateMapView();
+refreshCaches();
 geolocationUpdate();
