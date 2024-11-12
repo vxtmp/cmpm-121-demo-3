@@ -88,12 +88,13 @@ export class Board {
   }
 
   getCacheForCell(cell: Cell): Cache | null {
-    if (this.calculateLuckiness(cell) < CACHE_SPAWN_PROBABILITY) { // roll 1:10. deterministic. if supposed to have cache,
-      if (!this.knownCacheMomentos.has(cell)) { // if unvisited.
-        const numCoins = this.calculateNumCoinsToSpawn(cell);
-        this.initNewCache(cell, numCoins); // create cache at this cell.
+    const canonicalCell = this.getCanonicalCell(cell);
+    if (this.calculateLuckiness(canonicalCell) < CACHE_SPAWN_PROBABILITY) { // roll 1:10. deterministic. if supposed to have cache,
+      if (!this.knownCacheMomentos.has(canonicalCell)) { // if unvisited.
+        const numCoins = this.calculateNumCoinsToSpawn(canonicalCell);
+        this.initNewCache(canonicalCell, numCoins); // create cache at this cell.
       }
-      const momentos = this.knownCacheMomentos.get(cell)!; // get cacheMomentos.
+      const momentos = this.knownCacheMomentos.get(canonicalCell)!; // get cacheMomentos.
       return this.momentosToCache(momentos); // return converted cache object.
     }
     return null;
@@ -101,7 +102,8 @@ export class Board {
 
   setCacheForCell(cell: Cell, cache: Cache): void {
     const momentos = this.cacheToMomentos(cache);
-    this.knownCacheMomentos.set(cell, momentos);
+    const canonicalCell = this.getCanonicalCell(cell);
+    this.knownCacheMomentos.set(canonicalCell, momentos);
   }
 
   private cacheToMomentos(cache: Cache): string {
@@ -113,7 +115,8 @@ export class Board {
   }
 
   calculateNumCoinsToSpawn(cell: Cell): number {
-    const luckiness = this.calculateLuckiness(cell);
+    const canonicalCell = this.getCanonicalCell(cell);
+    const luckiness = this.calculateLuckiness(canonicalCell);
     return Math.floor(luckiness * 100);
   }
 
@@ -130,15 +133,59 @@ export class Board {
       location: cell,
     };
 
+    const canonicalCell = this.getCanonicalCell(cell);
+
     // add coins to the new cache
     for (let i = 0; i < numCoins; i++) {
-      newCache.coins.push(new Coin(cell, newCache.currentSerial++));
+      newCache.coins.push(new Coin(canonicalCell, newCache.currentSerial++));
     }
 
     // convert the new cache to a string
     const newMomentos = this.cacheToMomentos(newCache);
 
     // add the new cache to the map.
-    this.knownCacheMomentos.set(cell, newMomentos);
+    this.knownCacheMomentos.set(canonicalCell, newMomentos);
+  }
+
+  serialize(): string {
+    const serialized = {
+      tileWidth: this.tileWidth,
+      tileVisibilityRadius: this.tileVisibilityRadius,
+      knownCells: Array.from(this.knownCells.entries()),
+      cacheMomentos: Array.from(
+        this.knownCacheMomentos.entries(),
+      ).map(
+        ([cell, momento]) => ({
+          cell: { i: cell.i, j: cell.j },
+          momento,
+        }),
+      ),
+    };
+    return JSON.stringify(serialized);
+  }
+
+  static deserialize(data: string): Board {
+    const obj = JSON.parse(data);
+    const board = new Board(obj.tileWidth, obj.tileVisibilityRadius);
+
+    // Deserialize knownCells
+    for (const [key, cell] of obj.knownCells) {
+      board.knownCells.set(key, cell);
+    }
+
+    // Deserialize cacheMomentos
+    for (const item of obj.cacheMomentos) {
+      const cell = { i: item.cell.i, j: item.cell.j };
+      const cache = board.momentosToCache(item.momento);
+      board.setCacheForCell(cell, cache);
+      console.log(
+        "Deserialized cacheMomentos: ",
+        item.momento,
+        " at cell: ",
+        cell,
+      );
+    }
+
+    return board;
   }
 }

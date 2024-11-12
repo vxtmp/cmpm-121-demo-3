@@ -20,13 +20,15 @@ const NULL_ISLAND = leaflet.latLng(0, 0);
 
 // Tunable gameplay parameters
 const GAMEPLAY_ZOOM_LEVEL = 19;
-const TILE_DEGREES = 1e-4;
-const NEIGHBORHOOD_SIZE = 8;
+export const TILE_DEGREES = 1e-4;
+export const NEIGHBORHOOD_SIZE = 8;
 const GEOLOCATION_UPDATE_INTERVAL = 1000;
 export const CACHE_SPAWN_PROBABILITY = 0.1;
 
 // Global values.
-const board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
+let player: Player;
+let board: Board;
+
 let geolocationActivated = false;
 
 // ------------------------------------------------
@@ -54,6 +56,18 @@ geoButton.addEventListener("click", () => {
 
   geolocationActivated = !geolocationActivated;
   console.log("geolocationActivated: ", geolocationActivated);
+});
+// add reset button
+const resetButton = initButton("🚮");
+resetButton.addEventListener("click", () => {
+  localStorage.removeItem("board");
+  localStorage.removeItem("player");
+  board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
+  player = new Player(OAKES_CLASSROOM, map);
+  statusMsg = "You don't have any coins! Collect some from caches.";
+  updateMapView();
+  updateStatusPanel();
+  refreshCaches();
 });
 // add event listeners
 upButton.addEventListener("click", () => {
@@ -95,6 +109,7 @@ controlPanel.appendChild(leftButton);
 controlPanel.appendChild(upButton);
 controlPanel.appendChild(downButton);
 controlPanel.appendChild(rightButton);
+controlPanel.appendChild(resetButton);
 
 // MAP PANEL DIV ------------------------------
 const mapPanel = document.createElement("div");
@@ -119,6 +134,42 @@ let statusMsg = "You don't have any coins! Collect some from caches.";
 statusPanel.innerHTML = statusMsg;
 
 // ------------------------------------------------
+// SERIALIZATION
+// ------------------------------------------------
+
+function loadGameState() {
+  const boardData = localStorage.getItem("board");
+  const playerData = localStorage.getItem("player");
+
+  // if data exists, deserialize it.
+  if (boardData && playerData) {
+    board = Board.deserialize(boardData);
+    player = Player.deserialize(playerData, map);
+    statusMsg = `You have ${player.getCoinCount()} coins.`;
+  } else {
+    // if no data exists, create new
+    board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
+    player = new Player(OAKES_CLASSROOM, map);
+  }
+  // add observer functions to the player for movement.
+  player.addObserver(updateMapView);
+  player.addObserver(updateStatusPanel);
+
+  console.log("load game state debug");
+  console.log("coins: ", player.getCoinCount());
+  console.log("player location: ", player.getLocation());
+}
+
+function saveGameState() {
+  // clear the existing data
+  localStorage.removeItem("board");
+  localStorage.removeItem("player");
+
+  localStorage.setItem("board", board.serialize());
+  localStorage.setItem("player", player.serialize());
+}
+
+// ------------------------------------------------
 // GAMEPLAY
 // ------------------------------------------------
 
@@ -131,11 +182,6 @@ const map = leaflet.map(document.getElementById("map")!, {
   zoomControl: false,
   scrollWheelZoom: false,
 });
-
-// Create the player
-const player = new Player(OAKES_CLASSROOM, map);
-player.addObserver(updateMapView);
-player.addObserver(updateStatusPanel);
 
 // Populate the map with a background tile layer
 leaflet
@@ -310,6 +356,11 @@ function geolocationUpdate() {
   setTimeout(geolocationUpdate, GEOLOCATION_UPDATE_INTERVAL);
 }
 
+// player = new Player(OAKES_CLASSROOM, map);
+loadGameState();
+geolocationUpdate();
+updateStatusPanel();
 updateMapView();
 refreshCaches();
-geolocationUpdate();
+
+globalThis.addEventListener("beforeunload", saveGameState);

@@ -73,4 +73,33 @@ export class Player {
       observer();
     }
   }
+
+  public resetCoins(): void {
+    this.coins.length = 0;
+  }
+
+  serialize(): string {
+    return JSON.stringify({
+      location: this.location,
+      coins: this.coins.map((coin) => ({
+        spawnLoc: coin.spawnLoc,
+        serial: coin.serial,
+      })),
+    });
+  }
+
+  // takes localStorage.getItem("player") as input
+  static deserialize(data: string, map: leaflet.Map): Player {
+    console.log("Attempting to deserialize player");
+    const obj = JSON.parse(data); // parse gives some object.
+    console.log("obj returned by JSON parse: ", obj);
+    const player = new Player(
+      leaflet.latLng(obj.location.lat, obj.location.lng),
+      map,
+    );
+    obj.coins.forEach((coin: Coin) => {
+      player.addCoin(new Coin(coin.spawnLoc, coin.serial));
+    });
+    return player;
+  }
 }
