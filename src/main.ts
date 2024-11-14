@@ -123,7 +123,7 @@ function panCameraToCoinHome(coin: Coin) {
 
   // create a marker at this location
   const marker = leaflet.marker(board.getCellCenter(coin.spawnLoc));
-  marker.bindTooltip(decodeCoin(coin));
+  marker.bindTooltip("You found this coin here!<br>" + decodeCoin(coin));
   marker.addTo(map);
 
   // disables autopanning from geolocation updates
