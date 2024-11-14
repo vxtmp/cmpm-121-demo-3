@@ -64,6 +64,10 @@ const resetButton = initButton("🚮");
 resetButton.addEventListener("click", () => {
   // remove any player markers on the map
   map.removeLayer(player.getPlayerMarker());
+  // remove any polylines on the map
+  if (moveLine) {
+    map.removeLayer(moveLine);
+  }
   // clear the local storage.
   localStorage.removeItem("board");
   localStorage.removeItem("player");
@@ -86,7 +90,7 @@ upButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
-  addToMoveHistory();
+  updateDrawMoveHistory();
   saveGameState();
 });
 leftButton.addEventListener("click", () => {
@@ -96,7 +100,7 @@ leftButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
-  addToMoveHistory();
+  updateDrawMoveHistory();
   saveGameState();
 });
 
@@ -107,7 +111,7 @@ downButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
-  addToMoveHistory();
+  updateDrawMoveHistory();
   saveGameState();
 });
 rightButton.addEventListener("click", () => {
@@ -117,7 +121,7 @@ rightButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
-  addToMoveHistory();
+  updateDrawMoveHistory();
   saveGameState();
 });
 // append buttons to control panel.
@@ -164,6 +168,7 @@ function loadGameState() {
     board = Board.deserialize(boardData);
     player = Player.deserialize(playerData, map);
     moveHistory = JSON.parse(moveData);
+    updateDrawMoveHistory();
     statusMsg = `You have ${player.getCoinCount()} coins.`;
   } else {
     // if no data exists, create new
@@ -347,7 +352,7 @@ function spawnCache(cellToSpawn: Cell) {
   });
 }
 
-function addToMoveHistory() {
+function updateDrawMoveHistory() {
   if (sameAsLastLocation()) {
     return;
   }
@@ -412,7 +417,7 @@ function geolocationUpdate() {
             refreshCaches();
           }
           player.notifyObservers();
-          addToMoveHistory();
+          updateDrawMoveHistory();
           saveGameState();
         } else {
           console.log("geolocation returned null.");
