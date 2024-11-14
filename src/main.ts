@@ -62,68 +62,46 @@ geoButton.addEventListener("click", () => {
 // add reset button
 const resetButton = initButton("🚮");
 resetButton.addEventListener("click", () => {
-  // remove any player markers on the map
-  map.removeLayer(player.getPlayerMarker());
-  // remove any polylines on the map
-  if (moveLine) {
-    map.removeLayer(moveLine);
+  const userResponse = prompt(
+    "Are you sure you want to reset your game? Type 'yes' to confirm.",
+  );
+  if (userResponse?.toLowerCase() == "yes") {
+    resetGame();
+  } else {
+    console.log("Reset cancelled.");
   }
-  // clear the local storage.
-  localStorage.removeItem("board");
-  localStorage.removeItem("player");
-  board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
-  player = new Player(OAKES_CLASSROOM, map);
-  // add observer functions to the player for movement.
-  player.addObserver(updateMapView);
-  player.addObserver(updateStatusPanel);
-  moveHistory = [];
-  statusMsg = "You don't have any coins! Collect some from caches.";
-  updateMapView();
-  updateStatusPanel();
-  refreshCaches();
 });
+
 // add event listeners
 upButton.addEventListener("click", () => {
-  const oldLoc = player.getLocation();
-  player.moveUp();
-  const newLoc = player.getLocation();
-  if (crossedCellBoundary(oldLoc, newLoc)) {
-    refreshCaches();
-  }
-  updateDrawMoveHistory();
-  saveGameState();
+  moveClickListener(() => player.moveUp());
 });
 leftButton.addEventListener("click", () => {
-  const oldLoc = player.getLocation();
-  player.moveLeft();
-  const newLoc = player.getLocation();
-  if (crossedCellBoundary(oldLoc, newLoc)) {
-    refreshCaches();
-  }
-  updateDrawMoveHistory();
-  saveGameState();
+  moveClickListener(() => player.moveLeft());
 });
 
 downButton.addEventListener("click", () => {
-  const oldLoc = player.getLocation();
-  player.moveDown();
-  const newLoc = player.getLocation();
-  if (crossedCellBoundary(oldLoc, newLoc)) {
-    refreshCaches();
-  }
-  updateDrawMoveHistory();
-  saveGameState();
+  moveClickListener(() => player.moveDown());
 });
 rightButton.addEventListener("click", () => {
+  moveClickListener(() => player.moveRight());
+});
+
+// takes an appropriate move function and moves player.
+// compares before and after to conditionally refresh caches
+// update draw polyline and move history.
+// save game.
+function moveClickListener(moveFunction: () => void) {
   const oldLoc = player.getLocation();
-  player.moveRight();
+  moveFunction();
   const newLoc = player.getLocation();
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
   updateDrawMoveHistory();
   saveGameState();
-});
+}
+
 // append buttons to control panel.
 controlPanel.appendChild(geoButton);
 controlPanel.appendChild(leftButton);
@@ -194,6 +172,28 @@ function saveGameState() {
   localStorage.setItem("board", board.serialize());
   localStorage.setItem("player", player.serialize());
   localStorage.setItem("moveHistory", JSON.stringify(moveHistory));
+}
+
+function resetGame() {
+  // remove any player markers on the map
+  map.removeLayer(player.getPlayerMarker());
+  // remove any polylines on the map
+  if (moveLine) {
+    map.removeLayer(moveLine);
+  }
+  // clear the local storage.
+  localStorage.removeItem("board");
+  localStorage.removeItem("player");
+  board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
+  player = new Player(OAKES_CLASSROOM, map);
+  // add observer functions to the player for movement.
+  player.addObserver(updateMapView);
+  player.addObserver(updateStatusPanel);
+  moveHistory = [];
+  statusMsg = "You don't have any coins! Collect some from caches.";
+  updateMapView();
+  updateStatusPanel();
+  refreshCaches();
 }
 
 // ------------------------------------------------

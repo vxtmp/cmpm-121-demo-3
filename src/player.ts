@@ -51,7 +51,7 @@ export class Player {
     // this.addMovementHistory(location);
   }
 
-  private moveBy(latOffset: number, lngOffset: number): void {
+  public moveBy(latOffset: number, lngOffset: number): void {
     const newLat = this.location.lat + latOffset;
     const newLng = this.location.lng + lngOffset;
     const newLocation = leaflet.latLng(newLat, newLng);
