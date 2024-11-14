@@ -11,12 +11,11 @@ export function initControlPanel(): HTMLDivElement {
 }
 
 export function initButton(innerText: string): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.innerText = innerText;
-  button.style.fontSize = "15px";
-  button.style.backgroundColor = "#00A6ED";
-  button.style.color = "black";
-  return button;
+  const coinButton = document.createElement("button");
+  coinButton.innerText = innerText;
+  coinButton.style.backgroundColor = "#00A6ED";
+  coinButton.style.color = "black";
+  return coinButton;
 }
 
 // write an initEventListener function that takes a HTMLButtonElement and a function as parameters

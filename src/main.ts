@@ -13,6 +13,12 @@ import { Player } from "./player.ts";
 
 import { initButton, initControlPanel } from "./controlPanel.ts";
 import { promiseCurrentGeolocation } from "./geolocation.ts";
+import {
+  initCloseButtonContainerDiv,
+  initCoinButton,
+  initCoinContainerDiv,
+  initInventoryPanel,
+} from "./inventoryPanel.ts";
 
 // Location of our classroom (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
@@ -31,6 +37,11 @@ let board: Board;
 let moveLine: leaflet.Polyline;
 let moveHistory: leaflet.LatLng[] = [];
 
+// Clicking on a coin will disable auto-panning
+// by geolocation updates for a short time.
+const PAN_DISABLE_DURATION = 5000;
+let canPanMap = true;
+
 let geolocationActivated = false; // toggled with button.
 
 // ------------------------------------------------
@@ -42,6 +53,7 @@ const app = document.getElementById("app")!;
 // CONTROL PANEL DIV ------------------------------
 const controlPanel = initControlPanel();
 app.appendChild(controlPanel);
+
 // add up left down right buttons to controlPanel
 const upButton = initButton("⬆️");
 const leftButton = initButton("⬅️");
@@ -71,6 +83,58 @@ resetButton.addEventListener("click", () => {
     console.log("Reset cancelled.");
   }
 });
+
+// add inventory
+const inventoryButton = initButton("Inventory");
+inventoryButton.addEventListener("click", () => {
+  console.log("inventory opened");
+  // make a temporary popup window with a list of coins as buttons
+  const inventory = player.getInventory();
+  const popupDiv = initInventoryPanel();
+  const coinContainerDiv = initCoinContainerDiv();
+  const closeButtonContainerDiv = initCloseButtonContainerDiv();
+  popupDiv.appendChild(coinContainerDiv);
+  popupDiv.appendChild(closeButtonContainerDiv);
+  for (const coin of inventory) {
+    const coinButton = initCoinButton(decodeCoin(coin));
+    coinButton.addEventListener("click", () => {
+      panCameraToCoinHome(coin);
+      app.removeChild(popupDiv);
+    });
+    coinContainerDiv.appendChild(coinButton);
+  }
+  const closeButton = document.createElement("button");
+  closeButton.innerText = "Close";
+  closeButton.style.backgroundColor = "#666666";
+  closeButton.style.color = "black";
+  closeButtonContainerDiv.appendChild(closeButton);
+
+  app.appendChild(popupDiv);
+
+  // add event listener to close button
+  closeButton.addEventListener("click", () => {
+    app.removeChild(popupDiv);
+  });
+});
+
+// pan camera to spawn loc of clicked coin.
+function panCameraToCoinHome(coin: Coin) {
+  map.setView(board.getCellCenter(coin.spawnLoc), GAMEPLAY_ZOOM_LEVEL);
+
+  // create a marker at this location
+  const marker = leaflet.marker(board.getCellCenter(coin.spawnLoc));
+  marker.bindTooltip(decodeCoin(coin));
+  marker.addTo(map);
+
+  // disables autopanning from geolocation updates
+  canPanMap = false;
+  // re-enable after a short duration and delete the marker.
+  setTimeout(() => {
+    canPanMap = true;
+    map.removeLayer(marker);
+    updateMapView();
+  }, PAN_DISABLE_DURATION);
+}
 
 // add event listeners
 upButton.addEventListener("click", () => {
@@ -109,6 +173,7 @@ controlPanel.appendChild(upButton);
 controlPanel.appendChild(downButton);
 controlPanel.appendChild(rightButton);
 controlPanel.appendChild(resetButton);
+controlPanel.appendChild(inventoryButton);
 
 // MAP PANEL DIV ------------------------------
 const mapPanel = document.createElement("div");
@@ -157,10 +222,6 @@ function loadGameState() {
   // add observer functions to the player for movement.
   player.addObserver(updateMapView);
   player.addObserver(updateStatusPanel);
-
-  console.log("load game state debug");
-  console.log("coins: ", player.getCoinCount());
-  console.log("player location: ", player.getLocation());
 }
 
 function saveGameState() {
@@ -220,7 +281,9 @@ leaflet
   .addTo(map);
 
 function updateMapView() {
-  map.setView(player.getLocation(), GAMEPLAY_ZOOM_LEVEL);
+  if (canPanMap) {
+    map.setView(player.getLocation(), GAMEPLAY_ZOOM_LEVEL);
+  }
 }
 
 // iterate over nearby cells,
@@ -357,15 +420,7 @@ function updateDrawMoveHistory() {
     return;
   }
   moveHistory.push(player.getLocation());
-  debugConsoleLogMoveHistory();
   drawPolyline();
-}
-
-function debugConsoleLogMoveHistory() {
-  console.log("moveHistory: ");
-  for (const coord of moveHistory) {
-    console.log(coord.lat + ", " + coord.lng + "\n");
-  }
 }
 
 function sameAsLastLocation() {

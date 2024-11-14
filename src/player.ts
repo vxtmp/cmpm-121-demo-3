@@ -19,21 +19,12 @@ export class Player {
     this.playerMarker.addTo(map);
   }
 
-  private addMovementHistory(location: leaflet.LatLng): void {
-    if (!this.sameAsLastLocation(location)) {
-      this.movementHistory.push(location);
-    }
+  public getInventory() {
+    return this.coins;
   }
 
   public getPlayerMarker(): leaflet.Marker {
     return this.playerMarker;
-  }
-  private sameAsLastLocation(location: leaflet.LatLng): boolean {
-    if (this.movementHistory.length === 0) {
-      return true;
-    }
-    const lastLocation = this.movementHistory[this.movementHistory.length - 1];
-    return lastLocation.equals(location);
   }
 
   public getMovementHistory(): leaflet.LatLng[] {
@@ -106,10 +97,6 @@ export class Player {
         spawnLoc: coin.spawnLoc,
         serial: coin.serial,
       })),
-      // movementHistory: this.movementHistory.map((loc) => ({
-      //   lat: loc.lat,
-      //   lng: loc.lng,
-      // }))
     });
   }
 
@@ -125,10 +112,6 @@ export class Player {
     obj.coins.forEach((coin: Coin) => {
       player.addCoin(new Coin(coin.spawnLoc, coin.serial));
     });
-
-    // obj.movementHistory.forEach((loc: { lat: number, lng: number }) => {
-    //   player.movementHistory.push(leaflet.latLng(loc.lat, loc.lng));
-    // });
     return player;
   }
 }

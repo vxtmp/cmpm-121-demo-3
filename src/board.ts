@@ -56,6 +56,14 @@ export class Board {
     });
   }
 
+  getCellCenter(cell: Cell): leaflet.LatLng {
+    const { i, j } = cell; // unwrap the cell object.
+    return leaflet.latLng(
+      (i + 0.5) * this.tileWidth,
+      (j + 0.5) * this.tileWidth,
+    );
+  }
+
   // Takes cell object, returns leaflet bounds object.
   getCellBounds(cell: Cell): leaflet.LatLngBounds {
     const { i, j } = cell; // unwrap the cell object.
@@ -105,11 +113,11 @@ export class Board {
     const canonicalCell = this.getCanonicalCell(cell);
     this.knownCacheMomentos.set(canonicalCell, momentos);
   }
-
+  // CACHE TO STRING
   private cacheToMomentos(cache: Cache): string {
     return JSON.stringify(cache);
   }
-
+  // STRING TO CACHE
   private momentosToCache(momentos: string): Cache {
     return JSON.parse(momentos);
   }
@@ -178,12 +186,6 @@ export class Board {
       const cell = { i: item.cell.i, j: item.cell.j };
       const cache = board.momentosToCache(item.momento);
       board.setCacheForCell(cell, cache);
-      console.log(
-        "Deserialized cacheMomentos: ",
-        item.momento,
-        " at cell: ",
-        cell,
-      );
     }
 
     return board;
