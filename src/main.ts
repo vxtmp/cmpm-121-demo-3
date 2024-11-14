@@ -77,6 +77,7 @@ upButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
+  saveGameState();
 });
 leftButton.addEventListener("click", () => {
   const oldLoc = player.getLocation();
@@ -85,6 +86,7 @@ leftButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
+  saveGameState();
 });
 
 downButton.addEventListener("click", () => {
@@ -94,6 +96,7 @@ downButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
+  saveGameState();
 });
 rightButton.addEventListener("click", () => {
   const oldLoc = player.getLocation();
@@ -102,6 +105,7 @@ rightButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
+  saveGameState();
 });
 // append buttons to control panel.
 controlPanel.appendChild(geoButton);
@@ -287,6 +291,7 @@ function spawnCache(cellToSpawn: Cell) {
         popupText.innerText =
           `You found a cache! ${cache.coins.length} coins here.`;
         player.notifyObservers();
+        saveGameState();
       }
 
       return false; // This supposedly prevents popup from closing on click.
@@ -310,6 +315,7 @@ function spawnCache(cellToSpawn: Cell) {
         popupText.innerText =
           `You found a cache! ${cache.coins.length} coins here.`;
         player.notifyObservers();
+        saveGameState();
       }
       return false; // This supposedly prevents popup from closing on click.
     });
@@ -352,6 +358,7 @@ function geolocationUpdate() {
       .catch((error) => {
         console.error("Error getting location:", error);
       });
+    saveGameState();
   }
   setTimeout(geolocationUpdate, GEOLOCATION_UPDATE_INTERVAL);
 }

@@ -7,6 +7,8 @@ export class Player {
   private playerMarker: leaflet.Marker;
   private observers: (() => void)[] = [];
 
+  private movementHistory: leaflet.LatLng[] = [];
+
   private MOVE_INCREMENT = 0.00001;
 
   constructor(location: leaflet.LatLng, map: leaflet.Map) {
