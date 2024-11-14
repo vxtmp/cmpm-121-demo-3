@@ -28,8 +28,10 @@ export const CACHE_SPAWN_PROBABILITY = 0.1;
 // Global values.
 let player: Player;
 let board: Board;
+let moveLine: leaflet.Polyline;
+let moveHistory: leaflet.LatLng[] = [];
 
-let geolocationActivated = false;
+let geolocationActivated = false; // toggled with button.
 
 // ------------------------------------------------
 // UI ELEMENTS
@@ -60,10 +62,17 @@ geoButton.addEventListener("click", () => {
 // add reset button
 const resetButton = initButton("🚮");
 resetButton.addEventListener("click", () => {
+  // remove any player markers on the map
+  map.removeLayer(player.getPlayerMarker());
+  // clear the local storage.
   localStorage.removeItem("board");
   localStorage.removeItem("player");
   board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
   player = new Player(OAKES_CLASSROOM, map);
+  // add observer functions to the player for movement.
+  player.addObserver(updateMapView);
+  player.addObserver(updateStatusPanel);
+  moveHistory = [];
   statusMsg = "You don't have any coins! Collect some from caches.";
   updateMapView();
   updateStatusPanel();
@@ -77,6 +86,7 @@ upButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
+  addToMoveHistory();
   saveGameState();
 });
 leftButton.addEventListener("click", () => {
@@ -86,6 +96,7 @@ leftButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
+  addToMoveHistory();
   saveGameState();
 });
 
@@ -96,6 +107,7 @@ downButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
+  addToMoveHistory();
   saveGameState();
 });
 rightButton.addEventListener("click", () => {
@@ -105,6 +117,7 @@ rightButton.addEventListener("click", () => {
   if (crossedCellBoundary(oldLoc, newLoc)) {
     refreshCaches();
   }
+  addToMoveHistory();
   saveGameState();
 });
 // append buttons to control panel.
@@ -144,16 +157,19 @@ statusPanel.innerHTML = statusMsg;
 function loadGameState() {
   const boardData = localStorage.getItem("board");
   const playerData = localStorage.getItem("player");
+  const moveData = localStorage.getItem("moveHistory");
 
   // if data exists, deserialize it.
-  if (boardData && playerData) {
+  if (boardData && playerData && moveData) {
     board = Board.deserialize(boardData);
     player = Player.deserialize(playerData, map);
+    moveHistory = JSON.parse(moveData);
     statusMsg = `You have ${player.getCoinCount()} coins.`;
   } else {
     // if no data exists, create new
     board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
     player = new Player(OAKES_CLASSROOM, map);
+    moveHistory = [];
   }
   // add observer functions to the player for movement.
   player.addObserver(updateMapView);
@@ -168,9 +184,11 @@ function saveGameState() {
   // clear the existing data
   localStorage.removeItem("board");
   localStorage.removeItem("player");
+  localStorage.removeItem("moveHistory");
 
   localStorage.setItem("board", board.serialize());
   localStorage.setItem("player", player.serialize());
+  localStorage.setItem("moveHistory", JSON.stringify(moveHistory));
 }
 
 // ------------------------------------------------
@@ -196,6 +214,12 @@ leaflet
   })
   .addTo(map);
 
+function updateMapView() {
+  map.setView(player.getLocation(), GAMEPLAY_ZOOM_LEVEL);
+}
+
+// iterate over nearby cells,
+// calculate luck, spawn clickables
 function createCaches() {
   const location = player.getLocation();
   for (const neighbor of board.getCellsNearPoint(location)) {
@@ -205,9 +229,7 @@ function createCaches() {
   }
 }
 
-function updateMapView() {
-  map.setView(player.getLocation(), GAMEPLAY_ZOOM_LEVEL);
-}
+// remove existing clickables and spawn new ones.
 function refreshCaches() {
   // clear all the rects and then spawn new ones based on new position.
   map.eachLayer((layer) => {
@@ -218,6 +240,8 @@ function refreshCaches() {
   createCaches();
 }
 
+// Bool function to check if player entered new cell
+// Used to conditionally refresh the displayed caches.
 function crossedCellBoundary(
   oldLoc: leaflet.LatLng,
   newLoc: leaflet.LatLng,
@@ -323,6 +347,42 @@ function spawnCache(cellToSpawn: Cell) {
   });
 }
 
+function addToMoveHistory() {
+  if (sameAsLastLocation()) {
+    return;
+  }
+  moveHistory.push(player.getLocation());
+  debugConsoleLogMoveHistory();
+  drawPolyline();
+}
+
+function debugConsoleLogMoveHistory() {
+  console.log("moveHistory: ");
+  for (const coord of moveHistory) {
+    console.log(coord.lat + ", " + coord.lng + "\n");
+  }
+}
+
+function sameAsLastLocation() {
+  if (moveHistory.length == 0) {
+    return false;
+  }
+  if (moveHistory[moveHistory.length - 1] == player.getLocation()) {
+    return true;
+  }
+  return false;
+}
+
+function drawPolyline() {
+  if (moveLine) {
+    map.removeLayer(moveLine);
+  }
+  moveLine = leaflet.polyline(moveHistory, {
+    color: "blue",
+  }).addTo(map);
+}
+
+// create a standardized text string out of the coin object.
 export function decodeCoin(coin: Coin): string {
   return `${coin.spawnLoc.i}:${coin.spawnLoc.j}#${coin.serial}`;
 }
@@ -333,7 +393,8 @@ export function stringifyCell(cell: Cell): string {
   return `${i}:${j}`;
 }
 
-// periodicallyc all this function to update player location.
+// update player location based on geolocation.
+// recursively calls itself with a timeout.
 function geolocationUpdate() {
   if (geolocationActivated) {
     console.log("attempting geolocation update.");
@@ -351,6 +412,8 @@ function geolocationUpdate() {
             refreshCaches();
           }
           player.notifyObservers();
+          addToMoveHistory();
+          saveGameState();
         } else {
           console.log("geolocation returned null.");
         }
@@ -358,7 +421,6 @@ function geolocationUpdate() {
       .catch((error) => {
         console.error("Error getting location:", error);
       });
-    saveGameState();
   }
   setTimeout(geolocationUpdate, GEOLOCATION_UPDATE_INTERVAL);
 }
