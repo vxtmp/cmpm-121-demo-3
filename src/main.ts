@@ -11,14 +11,10 @@ import "./leafletWorkaround.ts";
 import { Board, Cell, Coin } from "./board.ts";
 import { Player } from "./player.ts";
 
-import { initButton, initControlPanel } from "./controlPanel.ts";
 import { promiseCurrentGeolocation } from "./geolocation.ts";
-import {
-  initCloseButtonContainerDiv,
-  initCoinButton,
-  initCoinContainerDiv,
-  initInventoryPanel,
-} from "./inventoryPanel.ts";
+import { initializeControlPanel } from "./ui.ts";
+import { initializeStatusPanel } from "./ui.ts";
+import { initializeInventoryButton } from "./ui.ts";
 
 // Location of our classroom (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
@@ -32,7 +28,7 @@ const GEOLOCATION_UPDATE_INTERVAL = 1000;
 export const CACHE_SPAWN_PROBABILITY = 0.1;
 
 // Global values.
-let player: Player;
+export let player: Player;
 let board: Board;
 let moveLine: leaflet.Polyline;
 let moveHistory: leaflet.LatLng[] = [];
@@ -42,7 +38,7 @@ let moveHistory: leaflet.LatLng[] = [];
 const PAN_DISABLE_DURATION = 5000;
 let canPanMap = true;
 
-let geolocationActivated = false; // toggled with button.
+export let geolocationActivated = false; // toggled with button.
 
 // ------------------------------------------------
 // UI ELEMENTS
@@ -51,74 +47,18 @@ let geolocationActivated = false; // toggled with button.
 const app = document.getElementById("app")!;
 
 // CONTROL PANEL DIV ------------------------------
-const controlPanel = initControlPanel();
+const controlPanel = initializeControlPanel();
 app.appendChild(controlPanel);
 
-// add up left down right buttons to controlPanel
-const upButton = initButton("⬆️");
-const leftButton = initButton("⬅️");
-const downButton = initButton("⬇️");
-const rightButton = initButton("➡️");
-// add geo button
-const geoButton = initButton("🌐");
-geoButton.addEventListener("click", () => {
-  // toggle hide up left right down buttons
-  upButton.hidden = !upButton.hidden;
-  leftButton.hidden = !leftButton.hidden;
-  downButton.hidden = !downButton.hidden;
-  rightButton.hidden = !rightButton.hidden;
-
+export function toggleGeolocation() {
   geolocationActivated = !geolocationActivated;
-  console.log("geolocationActivated: ", geolocationActivated);
-});
-// add reset button
-const resetButton = initButton("🚮");
-resetButton.addEventListener("click", () => {
-  const userResponse = prompt(
-    "Are you sure you want to reset your game? Type 'yes' to confirm.",
-  );
-  if (userResponse?.toLowerCase() == "yes") {
-    resetGame();
-  } else {
-    console.log("Reset cancelled.");
-  }
-});
-
+}
 // add inventory
-const inventoryButton = initButton("Inventory");
-inventoryButton.addEventListener("click", () => {
-  console.log("inventory opened");
-  // make a temporary popup window with a list of coins as buttons
-  const inventory = player.getInventory();
-  const popupDiv = initInventoryPanel();
-  const coinContainerDiv = initCoinContainerDiv();
-  const closeButtonContainerDiv = initCloseButtonContainerDiv();
-  popupDiv.appendChild(coinContainerDiv);
-  popupDiv.appendChild(closeButtonContainerDiv);
-  for (const coin of inventory) {
-    const coinButton = initCoinButton(decodeCoin(coin));
-    coinButton.addEventListener("click", () => {
-      panCameraToCoinHome(coin);
-      app.removeChild(popupDiv);
-    });
-    coinContainerDiv.appendChild(coinButton);
-  }
-  const closeButton = document.createElement("button");
-  closeButton.innerText = "Close";
-  closeButton.style.backgroundColor = "#666666";
-  closeButton.style.color = "black";
-  closeButtonContainerDiv.appendChild(closeButton);
-
-  app.appendChild(popupDiv);
-
-  // add event listener to close button
-  closeButton.addEventListener("click", () => {
-    app.removeChild(popupDiv);
-  });
-});
+const inventoryButton = initializeInventoryButton();
+controlPanel.appendChild(inventoryButton);
 
 // pan camera to spawn loc of clicked coin.
-function panCameraToCoinHome(coin: Coin) {
+export function panCameraToCoinHome(coin: Coin) {
   map.setView(board.getCellCenter(coin.spawnLoc), GAMEPLAY_ZOOM_LEVEL);
 
   // create a marker at this location
@@ -136,26 +76,11 @@ function panCameraToCoinHome(coin: Coin) {
   }, PAN_DISABLE_DURATION);
 }
 
-// add event listeners
-upButton.addEventListener("click", () => {
-  moveClickListener(() => player.moveUp());
-});
-leftButton.addEventListener("click", () => {
-  moveClickListener(() => player.moveLeft());
-});
-
-downButton.addEventListener("click", () => {
-  moveClickListener(() => player.moveDown());
-});
-rightButton.addEventListener("click", () => {
-  moveClickListener(() => player.moveRight());
-});
-
 // takes an appropriate move function and moves player.
 // compares before and after to conditionally refresh caches
 // update draw polyline and move history.
 // save game.
-function moveClickListener(moveFunction: () => void) {
+export function moveClickListener(moveFunction: () => void) {
   const oldLoc = player.getLocation();
   moveFunction();
   const newLoc = player.getLocation();
@@ -165,15 +90,6 @@ function moveClickListener(moveFunction: () => void) {
   updateDrawMoveHistory();
   saveGameState();
 }
-
-// append buttons to control panel.
-controlPanel.appendChild(geoButton);
-controlPanel.appendChild(leftButton);
-controlPanel.appendChild(upButton);
-controlPanel.appendChild(downButton);
-controlPanel.appendChild(rightButton);
-controlPanel.appendChild(resetButton);
-controlPanel.appendChild(inventoryButton);
 
 // MAP PANEL DIV ------------------------------
 const mapPanel = document.createElement("div");
@@ -186,16 +102,11 @@ mapPanel.style.left = "0";
 mapPanel.id = "map";
 
 // STATUS PANEL DIV ------------------------------
-const statusPanel = document.createElement("div");
-app.appendChild(statusPanel);
-statusPanel.style.width = "100%";
-statusPanel.style.height = "50px";
-statusPanel.style.position = "absolute";
-statusPanel.style.bottom = "0";
-statusPanel.style.left = "0";
-statusPanel.style.backgroundColor = "rgba(0,0,0,0.2)";
 let statusMsg = "You don't have any coins! Collect some from caches.";
-statusPanel.innerHTML = statusMsg;
+const statusPanel = initializeStatusPanel(
+  statusMsg,
+);
+app.appendChild(statusPanel);
 
 // ------------------------------------------------
 // SERIALIZATION
@@ -235,7 +146,7 @@ function saveGameState() {
   localStorage.setItem("moveHistory", JSON.stringify(moveHistory));
 }
 
-function resetGame() {
+export function resetGame() {
   // remove any player markers on the map
   map.removeLayer(player.getPlayerMarker());
   // remove any polylines on the map
